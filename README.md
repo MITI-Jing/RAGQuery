@@ -153,11 +153,6 @@ ragquery/
 └── README.md
 ```
 
----
-
-## Author
-
-Built by Jing Li — a career changer passionate about AI for real-world use cases.
 
 ## License
 
