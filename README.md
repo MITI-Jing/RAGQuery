@@ -1,105 +1,164 @@
-# 🤖 ArxivPal AI Research Agent
+# RAGQuery
 
-**ArxivPal** is an AI-powered agent prototype that extracting key insights and answers natural language questions using Retrieval-Augmented Generation (RAG) on academic papers from the [arXiv](https://arxiv.org/).Built with OpenAI, LangChain, FastAPI, and Streamlit.
+**RAGQuery** is a document Q&A engine powered by Retrieval-Augmented Generation (RAG). Upload a document or paste text, ask questions, and get answers grounded in the actual source — with evidence and quality scores shown for every response.
 
----
-
-## 🚀 Features
-
-- 🧠 **LLM-Powered QA** – Ask questions about academic papers using OpenAI models.
-- 🔍 **RAG Pipeline** – Retrieves relevant chunks and grounds answers in the source.
-- 📚 **Built on Real Papers** – Uses the [`ccdv/arxiv-summarization`](https://huggingface.co/datasets/ccdv/arxiv-summarization) dataset.
-- 📂 **(Coming Soon)**: Upload and analyze any research paper.
-- 🪄 Expandable source context with every answer.
-- 💬 Persistent chat history per paper.
-- 🐳 Docker-ready for easy deployment.
+Built with OpenAI, LangChain, FAISS, RAGAS, FastAPI, and Streamlit.
 
 ---
 
-## 📸 Preview
+## Features
 
-![screenshot](./assets/screenshot_streamlit.png)
-
----
-
-
-## 🏗️ Tech Stack
-
-| Layer         | Tools Used                                                                 |
-|---------------|-----------------------------------------------------------------------------|
-| LLM & Embedding | `OpenAI GPT-3.5/4`, `text-embedding-ada-002`                              |
-| RAG & Vector DB | `LangChain`, `FAISS`, `ccdv/arxiv-summarization`                         |
-| Backend       | `FastAPI`                                                                  |
-| Frontend      | `Streamlit`                                                                |
-| Secrets       | `.env` with `python-dotenv`                                                |
-| Containerization | `Docker` (in progress)                                                  |
+- **Document Upload** — supports `.txt`, `.pdf`, `.md`, `.docx`
+- **Paste Text** — load raw text directly without a file
+- **RAG Pipeline** — retrieves relevant chunks and grounds answers in the source
+- **Evidence Display** — every answer shows the exact text it was based on
+- **RAGAS Evaluation** — each response is scored for **Faithfulness** and **Answer Relevancy** in real time
+- **Chat History** — all questions and answers visible in the session
+- **API Key via UI** — enter your OpenAI key in the app, no environment variables needed
+- **Docker-ready** — containerised with separate backend and frontend services
 
 ---
 
-## 🔧 Setup Instructions
+## Tech Stack
+
+| Layer | Tools |
+|---|---|
+| LLM | OpenAI GPT-4.1 |
+| Embeddings | `all-MiniLM-L6-v2` (HuggingFace, runs locally) |
+| Vector Store | FAISS (in-memory) |
+| RAG Framework | LangChain |
+| Evaluation | RAGAS (faithfulness + answer relevancy) |
+| Backend | FastAPI |
+| Frontend | Streamlit |
+| Containerisation | Docker, Docker Compose |
+
+---
+
+## How It Works
+
+```
+Document / Text
+      │
+      ▼
+  Text Extraction (data_loader.py)
+      │
+      ▼
+  Chunking — RecursiveCharacterTextSplitter (512 tokens, 50 overlap)
+      │
+      ▼
+  Embeddings — all-MiniLM-L6-v2 → FAISS vector store
+      │
+      ▼
+  Question → Similarity Search → Top 4 chunks
+      │
+      ▼
+  GPT-4.1 (grounded prompt, context-only answers)
+      │
+      ▼
+  Answer + Evidence + RAGAS scores (faithfulness, answer relevancy)
+```
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Health check |
+| `POST` | `/load` | Upload a file and create a session |
+| `POST` | `/load-text` | Load pasted text and create a session |
+| `POST` | `/ask` | Ask a question against a loaded session |
+
+### `/ask` Response Shape
+
+```json
+{
+  "question": "What is the main argument?",
+  "answer": "...",
+  "evidence": ["chunk 1 text", "chunk 2 text"],
+  "scores": {
+    "faithfulness": 0.95,
+    "answer_relevancy": 0.88
+  }
+}
+```
+
+---
+
+## Setup Instructions
 
 ### 1. Clone the Repo
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/arxivpal-ai-agent.git
-cd arxivpal-ai-agent
+git clone https://github.com/MITI-Jing/ragquery.git
+cd ragquery
 ```
 
-### 2. Create Virtual Environment
+### 2. Run with Docker (recommended)
+
+```bash
+docker compose up --build
+```
+
+- Backend: `http://localhost:8000`
+- Frontend: `http://localhost:8501`
+
+### 3. Run Locally (without Docker)
+
+Create and activate a virtual environment:
+
 ```bash
 python -m venv venv
-source venv/bin/activate  # or `.\venv\Scripts\activate` on Windows
+source venv/bin/activate        # Windows: .\venv\Scripts\activate
 ```
 
-### 3. Install Dependencies
+Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Set Up .env File
-Create a .env file in the root folder:
-```bash
-OPENAI_API_KEY=your_openai_key_here
-```
+Start backend:
 
-🔐 Make sure .env is in your .gitignore!
-
-### 5. Run the App
-Start Backend (FastAPI)
 ```bash
 uvicorn backend.app:app --reload
 ```
 
-Start Frontend (Streamlit)
+Start frontend (new terminal):
+
 ```bash
-streamlit run streamlit_app.py
+streamlit run frontend/streamlit_app.py
 ```
 
-### 🐳 Docker (Coming Soon)
+---
 
-### 📂 File Structure
-```bash
-arxivpal-ai-agent/
+## File Structure
+
+```
+ragquery/
 ├── backend/
-│   ├── _init_.py               # Package initialization
-│   ├── app.py                  # FastAPI app
-│   ├── data_loader.py          # Loads and chunks documents
-│   ├── qa_agent.py             # Question-answering agent logic
-│   ├── rag_pipeline.py         # RAG pipeline logic
-│   ├── test_rag_qa.py          # Unit tests for RAG QA pipeline
+│   ├── __init__.py
+│   ├── app.py              # FastAPI app — /load, /load-text, /ask endpoints
+│   ├── data_loader.py      # Text extraction for .txt, .pdf, .md, .docx
+│   ├── qa_agent.py         # RetrievalQA chain with GPT-4.1 and grounding prompt
+│   ├── rag_pipeline.py     # Chunking and FAISS vector store creation
+│   ├── evaluator.py        # RAGAS evaluation (faithfulness + answer relevancy)
+│   └── test_rag_qa.py      # Tests
 ├── frontend/
-│   ├── streamlit_app.py        # Streamlit UI and user interaction
-├── .env                        # OpenAI key (not committed)
+│   └── streamlit_app.py    # Streamlit UI with file upload, paste text, chat, scores
+├── Dockerfile.backend
+├── Dockerfile.frontend
+├── docker-compose.yml
 ├── requirements.txt
-├── README.md
-└── Dockerfile (coming)         # Docker container setup
+└── README.md
+```
 
+---
 
-🙋‍♀️ Author
-Built by Jing Li – a career changer passionate about AI for real-world use cases.
+## Author
 
-📜 License
+Built by Jing Li — a career changer passionate about AI for real-world use cases.
+
+## License
+
 MIT License
-
-⭐️ Support
-Star the repo if you found it helpful! Reach out or raise an issue for feature requests or bugs.

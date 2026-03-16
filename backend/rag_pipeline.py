@@ -1,7 +1,8 @@
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.schema import Document
+from langchain_core.documents import Document
+
 
 def chunk_article(article_text):
     splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=50)

@@ -1,11 +1,23 @@
-from datasets import load_dataset
+import io
+from pathlib import Path
 
-def get_sample_paper(index=0):
-    dataset = load_dataset("ccdv/arxiv-summarization", split="train[:100]")
-    return dataset[index]["article"], dataset[index]["abstract"]
 
-if __name__ == "__main__":
-    article, abstract = get_sample_paper()
-    print("Article snippet:", article[501:1500])
-    print("Abstract:", abstract)
-    print("Total papers in sample:", len(get_sample_paper())) 
+def extract_text(file_bytes: bytes, filename: str) -> str:
+    ext = Path(filename).suffix.lower()
+
+    if ext in (".txt", ".md"):
+        return file_bytes.decode("utf-8")
+
+    elif ext == ".pdf":
+        import pdfplumber
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            pages = [page.extract_text() or "" for page in pdf.pages]
+        return "\n".join(pages)
+
+    elif ext == ".docx":
+        from docx import Document
+        doc = Document(io.BytesIO(file_bytes))
+        return "\n".join(para.text for para in doc.paragraphs if para.text.strip())
+
+    else:
+        raise ValueError(f"Unsupported file type: '{ext}'. Supported formats: .txt, .pdf, .md, .docx")
